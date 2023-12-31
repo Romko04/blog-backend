@@ -1,11 +1,9 @@
 import express from "express";
-import bccrypt from "bcrypt";
 import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
 
-import userModel from "./models/user.js";
 import { registerValidator } from "./validations/auth.js";
-import { validationResult } from "express-validator";
+import checkAuth from "./utils/checkAuth.js";
+import { getMe, login, register } from "./conrollers/userController.js";
 
 mongoose
   .connect('mongodb://localhost:27017/Blogbox')
@@ -16,53 +14,10 @@ const app = express();
 
 app.use(express.json())
 
-app.post('/auth/register', registerValidator, async function (req, res) {
-  const errors = validationResult(req)
+app.get('/auth/me', checkAuth, getMe)
 
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      message: errors.array()[0].msg
-    })
-  }
-  try {
-    const { username, email, password, userAvatar } = req.body
+app.post('/auth/login', login)
 
-    const salt = await bccrypt.genSalt(10)
-    const hash = await bccrypt.hash(password, salt)
-
-
-    const doc = new userModel({
-      username,
-      email,
-      passwordHash: hash,
-      userAvatar
-    })
-
-    const user = await doc.save()
-
-
-    const token = jwt.sign(
-      {
-        _id: user._id
-      },
-      'secret123',
-      {
-        expiresIn: '30d'
-      }
-    )
-
-    const { passwordHash, ...userData } = user._doc
-
-    res.json({
-      ...userData,
-      token
-    })
-  } catch (error) {
-    res.status(500).json({
-      message: 'Не вдалось зареєструватись',
-      error
-    })
-  }
-})
+app.post('/auth/register', registerValidator, register)
 
 app.listen(3000)
