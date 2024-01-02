@@ -1,7 +1,4 @@
-// import userModel from "../models/user.js";
-// import jwt from "jsonwebtoken";
-// import bccrypt from "bcrypt";
-// import { validationResult } from "express-validator";
+
 
 import { validationResult } from "express-validator"
 import Post from "../models/post.js"
@@ -45,17 +42,31 @@ export const createPost = async (req, res) => {
 
 export const getPostsAll = async (req, res) => {
     try {
-        const posts = await Post.find().populate({
-            path: 'user',
-            select: '-passwordHash' // Exclude the passwordHash field
-        }).exec()
+        const sortBy = req.query.sort;
 
-        res.json(posts)
+        let posts;
+
+        if (sortBy === 'views') {
+            // Сортування за кількістю переглядів у спадаючому порядку
+            posts = await Post.find().populate({
+                path: 'user',
+                select: '-passwordHash'
+            }).sort({ viewsCount: -1 }).exec();
+        } else {
+            // За замовчуванням (можете змінити на інше поле чи порядок сортування)
+            posts = await Post.find().populate({
+                path: 'user',
+                select: '-passwordHash'
+            }).exec();
+        }
+
+        res.json(posts);
 
     } catch (error) {
-        res.status(401).json({ message: "Немає доступа" })
+        res.status(401).json({ message: "Немає доступа" });
     }
-}
+};
+
 
 export const getPostOne = async (req, res) => {
     try {

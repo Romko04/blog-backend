@@ -10,6 +10,7 @@ import { postValidator } from "./validations/postValidation.js";
 
 import multer from "multer";
 import validationError from "./utils/validationError.js";
+import { createComment } from "./conrollers/commentController.js";
 
 mongoose
   .connect('mongodb://localhost:27017/Blogbox')
@@ -47,11 +48,11 @@ app.post('/posts', postValidator, validationError,  checkAuth, createPost)
 app.delete('/posts/:id', checkAuth, deletePost)
 app.patch('/posts/:id', checkAuth, postValidator, validationError, updatePost)
 
+app.post('/comments',  checkAuth, createComment)
+
 
 app.get('/auth/me', checkAuth, getMe)
-
 app.post('/auth/login', login)
-
 app.post('/auth/register', registerValidator, validationError, register)
 
 app.listen(3000)
