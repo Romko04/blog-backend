@@ -1,9 +1,15 @@
 import express from "express";
 import mongoose from "mongoose";
 
+import cors from "cors"
+import passport from "passport"
+import cookieSession from "cookie-session"
+import session from "express-session";
+
+
 import { registerValidator } from "./validations/auth.js";
 import checkAuth from "./utils/checkAuth.js";
-import { getMe, login, register } from "./conrollers/userController.js";
+import { getMe, googleCallback, login, register } from "./conrollers/userController.js";
 import { createPost, deletePost, getPostOne, getPostsAll, updatePost } from "./conrollers/postController.js";
 import { postValidator } from "./validations/postValidation.js";
 
@@ -19,6 +25,7 @@ mongoose
 
 const app = express();
 
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads')
@@ -31,6 +38,21 @@ const storage = multer.diskStorage({
 const upload = multer({storage})
 
 app.use(express.json())
+app.use(session({
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
+}));
+app.use(passport.initialize())
+app.use(passport.session())
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods:"GET,POST,PUT,DELETE",
+    credentials:true,
+  })
+)
 
 app.use('/uploads/', express.static('uploads'))
 
@@ -50,6 +72,14 @@ app.patch('/posts/:id', checkAuth, postValidator, validationError, updatePost)
 
 app.post('/comments',  checkAuth, createComment)
 
+app.get('/auth/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  googleCallback
+);
 
 app.get('/auth/me', checkAuth, getMe)
 app.post('/auth/login', login)

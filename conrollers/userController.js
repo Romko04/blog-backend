@@ -1,7 +1,78 @@
 import userModel from "../models/user.js";
+import dotenv from 'dotenv';
 import jwt from "jsonwebtoken";
-import bccrypt from "bcrypt";
+import bcrypt from "bcrypt";
+import GoogleStrategy from "passport-google-oauth20";
+import passport from "passport";
+import User from "../models/user.js";
 
+dotenv.config();
+
+
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "/auth/google/callback"
+  },
+  async function(accessToken, refreshToken, profile, cb) {
+    try {
+      // Генеруємо рандомний пароль
+      const randomPassword = Math.random().toString(36).slice(-8);
+  
+      // Хешуємо пароль
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(randomPassword, salt);
+  
+      // Створюємо новий користувач
+      const newUser = new User({
+        username: profile.displayName, // або profile.emails[0].value, залежно від наявності
+        email: profile.emails[0].value, // беремо першу доступну електронну адресу
+        passwordHash: passwordHash
+      });
+  
+      // Зберігаємо користувача в базі даних
+      const savedUser = await newUser.save();
+  
+      // Повертаємо користувача для подальшого використання (якщо потрібно)
+      cb(null, savedUser);
+    } catch (error) {
+      cb(error, null);
+    }
+  }
+  ));
+
+passport.serializeUser((user,done)=>{
+    done(null,user)
+})
+
+passport.deserializeUser((user,done)=>{
+    done(null,user)
+})
+
+export const googleCallback = (req,res)=>{
+    try {
+        const token = jwt.sign(
+            {
+                _id: req.user._id
+            },
+            'secret123',
+            {
+                expiresIn: '30d'
+            }
+        )
+    
+        const { passwordHash, ...userData } = req.user._doc
+        res.cookie('token', token, { httpOnly: true });
+        res.send({
+            ...userData,
+            token
+        })
+        
+    } catch (error) {
+        
+    }
+}
 
 export const getMe = async (req, res) => {
     try {
@@ -27,7 +98,7 @@ export const login = async (req, res) => {
             })
         }
 
-        const isValidPassword = bccrypt.compare(password, user._doc.passwordHash)
+        const isValidPassword = bcrypt.compare(password, user._doc.passwordHash)
 
 
         if (!isValidPassword) {
@@ -65,8 +136,8 @@ export const register = async (req, res) => {
     try {
         const { username, email, password, userAvatar } = req.body
 
-        const salt = await bccrypt.genSalt(10)
-        const hash = await bccrypt.hash(password, salt)
+        const salt = await bcrypt.genSalt(10)
+        const hash = await bcrypt.hash(password, salt)
 
 
         const doc = new userModel({
@@ -90,10 +161,9 @@ export const register = async (req, res) => {
         )
 
         const { passwordHash, ...userData } = user._doc
-
+        res.cookie('token', token, { httpOnly: true });
         res.json({
             ...userData,
-            token
         })
     } catch (error) {
         res.status(500).json({
