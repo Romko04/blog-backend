@@ -32,9 +32,7 @@ const postSchema = new mongoose.Schema({
     ],
     imageUrl: String
 },
-    {
-        tymestamps: true
-    }
+{ timestamps: true }
 );
 
 export default mongoose.model('Post', postSchema)

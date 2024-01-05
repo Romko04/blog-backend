@@ -88,4 +88,4 @@ app.get('/auth/me', checkAuth, getMe)
 app.post('/auth/login', login)
 app.post('/auth/register', registerValidator, validationError, register)
 
-app.listen(3000)
+app.listen(8000)

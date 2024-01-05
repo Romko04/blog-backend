@@ -17,9 +17,7 @@ const userSchema = new mongoose.Schema({
     },
     userAvatar: String
 },
-    {
-        tymestamps: true
-    }
+{ timestamps: true }
 );
 
 export default mongoose.model('User', userSchema)
