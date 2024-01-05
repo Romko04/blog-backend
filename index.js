@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 
 import cors from "cors"
 import passport from "passport"
-import cookieSession from "cookie-session"
 import session from "express-session";
 
 
@@ -16,7 +15,8 @@ import { postValidator } from "./validations/postValidation.js";
 
 import multer from "multer";
 import validationError from "./utils/validationError.js";
-import { createComment } from "./conrollers/commentController.js";
+import { createComment, deleteComment, updateComment } from "./conrollers/commentController.js";
+import { commentValidator } from "./validations/commentValidation.js";
 
 mongoose
   .connect('mongodb://localhost:27017/Blogbox')
@@ -70,7 +70,10 @@ app.post('/posts', postValidator, validationError,  checkAuth, createPost)
 app.delete('/posts/:id', checkAuth, deletePost)
 app.patch('/posts/:id', checkAuth, postValidator, validationError, updatePost)
 
-app.post('/comments',  checkAuth, createComment)
+app.post('/comments',commentValidator, validationError,  checkAuth, createComment)
+app.patch('/comments/:id', commentValidator, validationError,  checkAuth, updateComment)
+app.delete('/comments/:id',  checkAuth, deleteComment)
+
 
 app.get('/auth/google', passport.authenticate('google', {
   scope: ['profile', 'email']

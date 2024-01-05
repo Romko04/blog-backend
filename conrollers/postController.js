@@ -47,18 +47,38 @@ export const getPostsAll = async (req, res) => {
         let posts;
 
         if (sortBy === 'views') {
-            // Сортування за кількістю переглядів у спадаючому порядку
             posts = await Post.find().populate({
                 path: 'user',
+                model: 'User',
                 select: '-passwordHash'
-            }).sort({ viewsCount: -1 }).exec();
+            }).populate({
+                path: 'comments',
+                model: 'Comment',
+                populate: {
+                    path: 'user',
+                    model: 'User',
+                    select: '-passwordHash'
+                }
+            }).exec();
         } else {
-            // За замовчуванням (можете змінити на інше поле чи порядок сортування)
             posts = await Post.find().populate({
                 path: 'user',
+                model: 'User',
                 select: '-passwordHash'
+            }).populate({
+                path: 'comments',
+                model: 'Comment',
+                populate: {
+                    path: 'user',
+                    model: 'User',
+                    select: '-passwordHash'
+                }
             }).exec();
         }
+        
+        
+        
+        
 
         res.json(posts);
 
@@ -92,13 +112,22 @@ export const getPostOne = async (req, res) => {
 export const deletePost = async (req, res) => {
     try {
         const postId = req.params.id;
+        const userId = req.userId;
 
-        const post = await Post.deleteOne(
+
+        const post = await Post.findOne(
             {_id:postId}, // Передавайте ідентифікатор як рядок або ObjectId, але не обгортати його в об'єкт
         );
+        
 
         if (!post) {
             return res.status(404).json({ message: "Стаття не знайдена" });
+        }
+
+        if (!post || userId !== post.user.toString()) {
+            return res.status(403).json({
+                message: 'Ви не маєте прав для видалення цього поста',
+            });
         }
 
         return res.json({
@@ -112,23 +141,35 @@ export const deletePost = async (req, res) => {
 
 export const updatePost = async (req, res) => {
     try {
-        const { title, text, tags, viewsCount, image } = req.body
+        const { title, text, tags, viewsCount, image } = req.body;
         const postId = req.params.id;
+        const userId = req.userId; // Припустимо, що ви отримуєте ідентифікатор користувача з токену аутентифікації
 
-        const post = await Post.findByIdAndUpdate(
-            {_id:postId}, // Передавайте ідентифікатор як рядок або ObjectId, але не обгортати його в об'єкт
+        // Знайдіть пост за його id
+        const post = await Post.findById(postId);
+
+        // Перевірте, чи користувач є власником поста
+        if (!post || userId !== post.user.toString()) {
+            return res.status(403).json({
+                message: 'Ви не маєте прав для оновлення цього поста',
+            });
+        }
+
+        // Оновіть пост
+        const updatedPost = await Post.findByIdAndUpdate(
+            postId,
             { title, text, tags, viewsCount, image },
             { new: true }
         );
 
-        if (!post) {
+        if (!updatedPost) {
             return res.status(404).json({ message: "Стаття не знайдена" });
         }
 
-        return res.json(post);
+        return res.json(updatedPost);
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Не вдалось повернути статтю" });
+        console.error(error);
+        return res.status(500).json({ message: "Не вдалось оновити статтю" });
     }
 };
 
